@@ -1,4 +1,4 @@
-import { Application, Container, Graphics, Text } from 'pixi.js';
+import { Application, Container, Graphics, Text, Assets } from 'pixi.js';
 import { Hero } from './entities/Hero';
 import { Animal } from './entities/Animal';
 import { Yard } from './entities/Yard';
@@ -7,16 +7,20 @@ import { AnimalSpawner } from './systems/AnimalSpawner';
 import { Vector2D } from './utils/Vector2D';
 
 export class Game {
+  // tweak these to change visual size of characters
+  private static readonly HERO_RADIUS = 30;
+  private static readonly ANIMAL_RADIUS = 20;
+
   private app: Application;
   private gameContainer: Container;
-  private hero: Hero;
+  private hero!: Hero;
   private animals: Animal[] = [];
-  private yard: Yard;
-  private scoreManager: ScoreManager;
-  private scoreText: Text;
-  private collectedText: Text;
-  private messageText: Text;
-  private animalSpawner: AnimalSpawner;
+  private yard!: Yard;
+  private scoreManager!: ScoreManager;
+  private scoreText!: Text;
+  private collectedText!: Text;
+  private messageText!: Text;
+  private animalSpawner!: AnimalSpawner;
 
   constructor(app: Application) {
     this.app = app;
@@ -25,9 +29,17 @@ export class Game {
 
     this.scoreManager = new ScoreManager();
     this.initUI();
-    this.initGameObjects();
-    this.setupEventListeners();
-    this.animalSpawner = new AnimalSpawner(this, 800, 600);
+    // DO NOT create game objects here; wait for assets to load in start()
+  }
+
+  private async loadAssets(): Promise<void> {
+    try {
+      console.log('Loading assets...');
+      await Assets.load(['/sheep.jpg', '/pastuh.jpg']);
+      console.log('Assets loaded');
+    } catch (err) {
+      console.warn('Asset load failed, continuing without preload', err);
+    }
   }
 
   private initUI(): void {
@@ -49,7 +61,7 @@ export class Game {
         fill: 0xffffff,
       },
     });
-    this.collectedText.x = 650;
+    // x will be computed dynamically to keep it at the right edge
     this.collectedText.y = 10;
     this.app.stage.addChild(this.collectedText);
 
@@ -67,18 +79,21 @@ export class Game {
   }
 
   private initGameObjects(): void {
+    // Create yard
     this.yard = new Yard(650, 450, 120, 120);
     this.gameContainer.addChild(this.yard.getGraphics());
     this.gameContainer.addChild(this.yard.getBorderGraphics());
 
-    this.hero = new Hero(100, 100, 15);
+  // Create hero (use HERO_RADIUS)
+  this.hero = new Hero(100, 100, Game.HERO_RADIUS);
     this.gameContainer.addChild(this.hero.getGraphics());
 
+    // Create initial animals
     this.spawnInitialAnimals();
   }
 
   private spawnInitialAnimals(): void {
-    const count = Math.floor(Math.random() * 6) + 5;
+    const count = Math.floor(Math.random() * 6) + 5; // 5-10 animals
     for (let i = 0; i < count; i++) {
       this.spawnAnimal();
     }
@@ -87,7 +102,7 @@ export class Game {
   public spawnAnimal(): void {
     const x = Math.random() * 700 + 50;
     const y = Math.random() * 500 + 50;
-    const animal = new Animal(x, y, 10);
+  const animal = new Animal(x, y, Game.ANIMAL_RADIUS);
     this.animals.push(animal);
     this.gameContainer.addChild(animal.getGraphics());
   }
@@ -101,7 +116,11 @@ export class Game {
     });
   }
 
-  public start(): void {
+  public async start(): Promise<void> {
+    await this.loadAssets();
+    this.initGameObjects();
+    this.setupEventListeners();
+    this.animalSpawner = new AnimalSpawner(this, 800, 600);
     this.app.ticker.add(() => this.update(this.app.ticker.deltaTime));
   }
 
@@ -109,9 +128,11 @@ export class Game {
     this.hero.update(delta);
     this.animalSpawner.update(delta);
 
+    // Update animals
     this.animals.forEach((animal) => {
       animal.update(delta, this.hero);
 
+      // Check if animal reached yard
       if (animal.isInYard(this.yard) && !animal.isScored()) {
         animal.markAsScored();
         this.scoreManager.addScore(1);
@@ -119,10 +140,13 @@ export class Game {
       }
     });
 
+    // Check hero proximity to animals
     this.checkAnimalCollection();
 
+    // Remove scored animals
     this.removeCompletedAnimals();
 
+    // Update UI and yard state
     this.updateCollectedDisplay();
     const isMaxReached = this.hero.getFollowerCount() >= 5;
     this.yard.setHighlight(isMaxReached, delta);
@@ -161,7 +185,9 @@ export class Game {
   private updateCollectedDisplay(): void {
     const count = this.hero.getFollowerCount();
     this.collectedText.text = `Animals: ${count}/5`;
-    
+    // position on the right with 10px padding
+    this.collectedText.x = Math.max(10, this.app.screen.width - this.collectedText.width - 10);
+
     if (count >= 5) {
       this.messageText.text = 'Guide them to the YARD!';
       this.collectedText.style.fill = 0xff6600;

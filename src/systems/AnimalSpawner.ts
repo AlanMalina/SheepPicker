@@ -2,8 +2,8 @@ import { Game } from '../Game';
 
 export class AnimalSpawner {
   private game: Game;
-  private minInterval: number = 180;
-  private maxInterval: number = 420;
+  private minInterval: number = 180; // 3 seconds at 60fps
+  private maxInterval: number = 420; // 7 seconds at 60fps
   private timer: number = 0;
   private nextSpawnTime: number;
   private maxAnimals: number = 15;

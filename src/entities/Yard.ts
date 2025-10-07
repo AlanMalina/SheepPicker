@@ -33,6 +33,7 @@ export class Yard {
       const alpha = this.glowIntensity;
       const glowSize = 3 + this.glowIntensity * 2;
       
+      // Outer glow
       this.borderGraphics.rect(
         this.x - glowSize,
         this.y - glowSize,
@@ -41,6 +42,7 @@ export class Yard {
       );
       this.borderGraphics.stroke({ width: glowSize, color: 0xff6600, alpha: alpha * 0.8 });
       
+      // Inner bright border
       this.borderGraphics.rect(this.x, this.y, this.width, this.height);
       this.borderGraphics.stroke({ width: 3, color: 0xffffff, alpha: alpha });
     }
