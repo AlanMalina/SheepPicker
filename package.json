@@ -1,0 +1,21 @@
+{
+    "name": "herdsman-game",
+    "version": "1.0.0",
+    "description": "2D Herdsman mini-game prototype",
+    "main": "index.js",
+    "scripts": {
+      "dev": "vite",
+      "build": "tsc && vite build",
+      "preview": "vite preview"
+    },
+    "keywords": ["game", "pixi.js", "typescript"],
+    "author": "",
+    "license": "MIT",
+    "devDependencies": {
+      "typescript": "^5.3.3",
+      "vite": "^5.0.11"
+    },
+    "dependencies": {
+      "pixi.js": "^8.0.0"
+    }
+  }
