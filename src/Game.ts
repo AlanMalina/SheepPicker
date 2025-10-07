@@ -71,9 +71,10 @@ export class Game {
         fontSize: 20,
         fill: 0xffff00,
         fontWeight: 'bold',
+        align: 'center',
       },
     });
-    this.messageText.x = 250;
+    // start near the top; x will be centered dynamically in updateCollectedDisplay()
     this.messageText.y = 50;
     this.app.stage.addChild(this.messageText);
   }
@@ -195,5 +196,7 @@ export class Game {
       this.messageText.text = '';
       this.collectedText.style.fill = 0xffffff;
     }
+    // center the message text horizontally
+    this.messageText.x = Math.max(0, (this.app.screen.width - this.messageText.width) / 2);
   }
 }
