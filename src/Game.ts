@@ -8,8 +8,9 @@ import { Vector2D } from './utils/Vector2D';
 
 export class Game {
   // tweak these to change visual size of characters
-  private static readonly HERO_RADIUS = 30;
-  private static readonly ANIMAL_RADIUS = 20;
+  // Updated per request: hero radius 60, animal radius 30
+  private static readonly HERO_RADIUS = 50;
+  private static readonly ANIMAL_RADIUS = 25;
 
   private app: Application;
   private gameContainer: Container;
@@ -34,8 +35,9 @@ export class Game {
 
   private async loadAssets(): Promise<void> {
     try {
-      console.log('Loading assets...');
-      await Assets.load(['/sheep.jpg', '/pastuh.jpg']);
+  console.log('Loading assets...');
+  // preload the sheep SVG/png so Animal can use it immediately
+  await Assets.load(['/sheep.jpg', '/pastuh.png', '/coolsheep.png']);
       console.log('Assets loaded');
     } catch (err) {
       console.warn('Asset load failed, continuing without preload', err);

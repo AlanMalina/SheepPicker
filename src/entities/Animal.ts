@@ -22,7 +22,7 @@ export class Animal extends MovableEntity {
 
   private loadTexture(): void {
     try {
-  const texture = Texture.from('/sheep.jpg');
+  const texture = Texture.from('/coolsheep.png');
   this.sprite = new Sprite(texture);
   console.log('[Animal] texture created, baseTexture:', texture.baseTexture);
 
@@ -48,7 +48,7 @@ export class Animal extends MovableEntity {
         } else if (attempts > 60) {
           console.warn('[Animal] texture did not report size after', attempts, 'frames — falling back to /sheep.jpg');
           try {
-            const fallback = Texture.from('/sheepsvg.png');
+            const fallback = Texture.from('/sheep.jpg');
             this.sprite.texture = fallback;
             // reset attempt counter and try scaling again
             (trySetScale as any).attempts = 0;

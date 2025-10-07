@@ -17,7 +17,7 @@ export class Hero extends MovableEntity {
   private loadTexture(): void {
     try {
   // Use the public assets root; Vite will serve files from / by filename
-  const texture = Texture.from('/pastuh.jpg');
+  const texture = Texture.from('/pastuh.png');
   this.sprite = new Sprite(texture);
   console.log('[Hero] texture created, baseTexture:', texture.baseTexture);
 
