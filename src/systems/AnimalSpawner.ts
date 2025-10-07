@@ -2,8 +2,9 @@ import { Game } from '../Game';
 
 export class AnimalSpawner {
   private game: Game;
-  private minInterval: number = 180; // 3 seconds at 60fps
-  private maxInterval: number = 420; // 7 seconds at 60fps
+  // Fixed spawn interval: 1.5 seconds * 60fps = 90 ticks
+  private minInterval: number = 90;
+  private maxInterval: number = 90;
   private timer: number = 0;
   private nextSpawnTime: number;
   private maxAnimals: number = 15;
@@ -18,6 +19,7 @@ export class AnimalSpawner {
   }
 
   private getRandomInterval(): number {
+    // min and max are equal so this returns a fixed interval (90)
     return Math.random() * (this.maxInterval - this.minInterval) + this.minInterval;
   }
 
