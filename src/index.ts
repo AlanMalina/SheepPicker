@@ -6,7 +6,7 @@ const app = new Application();
 async function init() {
   await app.init({
     width: 1200,
-    height: 800,
+    height: 600,
     backgroundColor: 0x228B22,
   });
 

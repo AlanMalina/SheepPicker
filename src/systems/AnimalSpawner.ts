@@ -27,7 +27,11 @@ export class AnimalSpawner {
     this.timer += delta;
 
     if (this.timer >= this.nextSpawnTime) {
-      this.game.spawnAnimal();
+      // pick a spawn position across the whole field, keeping a small margin
+      const margin = 20;
+      const x = Math.random() * (this.gameWidth - margin * 2) + margin;
+      const y = Math.random() * (this.gameHeight - margin * 2) + margin;
+      this.game.spawnAnimal(x, y);
       this.timer = 0;
       this.nextSpawnTime = this.getRandomInterval();
     }

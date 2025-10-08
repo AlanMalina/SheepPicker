@@ -102,10 +102,11 @@ export class Game {
     }
   }
 
-  public spawnAnimal(): void {
-    const x = Math.random() * 700 + 50;
-    const y = Math.random() * 500 + 50;
-  const animal = new Animal(x, y, Game.ANIMAL_RADIUS);
+  public spawnAnimal(x?: number, y?: number): void {
+    // If coordinates aren't provided, pick a reasonable default area
+    const spawnX = typeof x === 'number' ? x : Math.random() * 700 + 50;
+    const spawnY = typeof y === 'number' ? y : Math.random() * 500 + 50;
+    const animal = new Animal(spawnX, spawnY, Game.ANIMAL_RADIUS);
     this.animals.push(animal);
     this.gameContainer.addChild(animal.getGraphics());
   }
@@ -117,14 +118,40 @@ export class Game {
       const pos = event.global;
       this.hero.moveTo(new Vector2D(pos.x, pos.y));
     });
+    // === 🧭 Keyboard controls ===
+    const keys: Record<string, boolean> = {};
+
+    const updateHeroDirection = () => {
+      let xDir = 0;
+      let yDir = 0;
+      if (keys['KeyW']) yDir -= 1;
+      if (keys['KeyS']) yDir += 1;
+      if (keys['KeyA']) xDir -= 1;
+      if (keys['KeyD']) xDir += 1;
+      this.hero.setVelocityDirection(xDir, yDir);
+    };
+
+    window.addEventListener('keydown', (e) => {
+      keys[e.code] = true;
+      updateHeroDirection();
+    });
+
+    window.addEventListener('keyup', (e) => {
+      keys[e.code] = false;
+      updateHeroDirection();
+    });
   }
+
+  
 
   public async start(): Promise<void> {
     await this.loadAssets();
     this.initGameObjects();
     this.setupEventListeners();
-    this.animalSpawner = new AnimalSpawner(this, 800, 600);
+    this.animalSpawner = new AnimalSpawner(this, 1200, 600);
     this.app.ticker.add(() => this.update(this.app.ticker.deltaTime));
+
+    
   }
 
   private update(delta: number): void {
@@ -201,4 +228,6 @@ export class Game {
     // center the message text horizontally
     this.messageText.x = Math.max(0, (this.app.screen.width - this.messageText.width) / 2);
   }
+
+  
 }
