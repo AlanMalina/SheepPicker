@@ -1,3 +1,4 @@
+// src/entities/Animal.ts
 import { Graphics, Sprite, Texture, Container } from 'pixi.js';
 import { Vector2D } from '../utils/Vector2D';
 import { MovableEntity } from './MovableEntity';
@@ -16,77 +17,58 @@ export class Animal extends MovableEntity {
   constructor(x: number, y: number, radius: number) {
     super(x, y, radius, 2);
     this.container = new Container();
+    this.container.x = x;
+    this.container.y = y;
     this.loadTexture();
     this.setNewPatrolTarget();
   }
 
   private loadTexture(): void {
     try {
-  const texture = Texture.from('/coolsheep.png');
-  this.sprite = new Sprite(texture);
-  console.log('[Animal] texture created, baseTexture:', texture.baseTexture);
-
-      // Center anchor
+      console.log('[Animal] Loading sheep texture...');
+      const texture = Texture.from('coolsheep.png');
+      this.sprite = new Sprite(texture);
+      
       this.sprite.anchor.set(0.5);
-
       this.container.addChild(this.sprite);
-      this.container.x = this.position.x;
-      this.container.y = this.position.y;
 
       const trySetScale = () => {
         if (!this.sprite) return;
+        
         const w = this.sprite.width;
         const h = this.sprite.height;
-        // track attempts so we can fallback if texture never loads correctly
-        (trySetScale as any).attempts = ((trySetScale as any).attempts || 0) + 1;
-        const attempts = (trySetScale as any).attempts;
-        console.log('[Animal] sprite size try:', w, h);
+        
         if (w > 0 && h > 0) {
-          const scale = (this.radius * 2) / Math.max(w, h);
+          const targetSize = 50; // Sheep size - smaller
+          const scale = targetSize / Math.max(w, h);
           this.sprite.scale.set(scale);
-          console.log('[Animal] sprite scaled to', scale);
-        } else if (attempts > 60) {
-          console.warn('[Animal] texture did not report size after', attempts, 'frames — falling back to /sheep.jpg');
-          try {
-            const fallback = Texture.from('/sheep.jpg');
-            this.sprite.texture = fallback;
-            // reset attempt counter and try scaling again
-            (trySetScale as any).attempts = 0;
-            requestAnimationFrame(trySetScale);
-          } catch (err) {
-            console.error('[Animal] fallback texture load failed', err);
-            // give up and keep fallback circle (drawFallback was not called because sprite exists), so remove sprite
-            if (this.sprite) this.container.removeChild(this.sprite);
-            this.sprite = null;
-            this.drawFallback();
-          }
+          console.log('[Animal] ✓ Sheep sprite scaled to', scale);
         } else {
           requestAnimationFrame(trySetScale);
         }
       };
-
+      
       trySetScale();
     } catch (error) {
-      console.warn('Failed to load sheep texture, using fallback circle');
+      console.warn('[Animal] Failed to load sheep texture:', error);
       this.drawFallback();
     }
   }
 
   private drawFallback(): void {
+    console.log('[Animal] Drawing white circle fallback');
     const graphics = new Graphics();
     graphics.circle(0, 0, this.radius);
     graphics.fill(0xffffff);
     this.container.addChild(graphics);
-    this.container.x = this.position.x;
-    this.container.y = this.position.y;
   }
 
   private setNewPatrolTarget(): void {
     this.patrolTarget = new Vector2D(
-      Math.random() * 700 + 50,
+      Math.random() * 1100 + 50,
       Math.random() * 500 + 50
     );
-    this.patrolWaitTime = Math.random() * 60 + 30; // 30-90 frames wait
+    this.patrolWaitTime = Math.random() * 60 + 30;
   }
 
   public update(delta: number, hero: Hero): void {
@@ -124,7 +106,7 @@ export class Animal extends MovableEntity {
     const direction = Vector2D.subtract(heroPos, this.position);
     const distance = direction.magnitude();
 
-    if (distance > 25) {
+    if (distance > 40) {
       const normalizedDirection = direction.normalize();
       const movement = normalizedDirection.scale(this.speed * delta);
       this.position = this.position.add(movement);
