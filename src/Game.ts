@@ -83,7 +83,7 @@ export class Game {
 
   private initGameObjects(): void {
     // Create yard
-    this.yard = new Yard(650, 450, 120, 120);
+    this.yard = new Yard(500, 400, 350, 120);
     this.gameContainer.addChild(this.yard.getGraphics());
     this.gameContainer.addChild(this.yard.getBorderGraphics());
 
