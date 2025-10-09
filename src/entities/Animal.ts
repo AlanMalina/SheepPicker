@@ -39,7 +39,7 @@ export class Animal extends MovableEntity {
         const h = this.sprite.height;
         
         if (w > 0 && h > 0) {
-          const targetSize = 50; // Sheep size - smaller
+          const targetSize = 40; // Sheep size - smaller
           const scale = targetSize / Math.max(w, h);
           this.sprite.scale.set(scale);
           console.log('[Animal] ✓ Sheep sprite scaled to', scale);
@@ -65,8 +65,8 @@ export class Animal extends MovableEntity {
 
   private setNewPatrolTarget(): void {
     this.patrolTarget = new Vector2D(
-      Math.random() * 1100 + 50,
-      Math.random() * 500 + 50
+      Math.random() * 1100 + 50,  // 50 to 1150 (1200 - 50)
+      Math.random() * 700 + 50    // 50 to 750 (800 - 50)
     );
     this.patrolWaitTime = Math.random() * 60 + 30;
   }
@@ -93,6 +93,13 @@ export class Animal extends MovableEntity {
         const normalizedDirection = direction.normalize();
         const movement = normalizedDirection.scale(this.speed * 0.5 * delta);
         this.position = this.position.add(movement);
+        
+        // Clamp position to green field boundaries (accounting for border)
+        const borderSize = 2; // Canvas border thickness
+        const margin = this.radius + 5; // Add extra padding
+        this.position.x = Math.max(borderSize + margin, Math.min(1200 - borderSize - margin, this.position.x));
+        this.position.y = Math.max(borderSize + margin, Math.min(800 - borderSize - margin - 200, this.position.y));
+        
         this.container.x = this.position.x;
         this.container.y = this.position.y;
       } else {
@@ -110,6 +117,13 @@ export class Animal extends MovableEntity {
       const normalizedDirection = direction.normalize();
       const movement = normalizedDirection.scale(this.speed * delta);
       this.position = this.position.add(movement);
+      
+      // Clamp position to green field boundaries (accounting for border)
+      const borderSize = 2; // Canvas border thickness
+      const margin = this.radius + 5; // Add extra padding
+      this.position.x = Math.max(borderSize + margin, Math.min(1200 - borderSize - margin, this.position.x));
+      this.position.y = Math.max(borderSize + margin, Math.min(800 - borderSize - margin, this.position.y));
+      
       this.container.x = this.position.x;
       this.container.y = this.position.y;
     }

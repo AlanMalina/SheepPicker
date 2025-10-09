@@ -81,7 +81,7 @@ export class Game {
     // Create yard - centered at bottom
     // Canvas is 1200x800, yard is 300x140
     // Position: x=450 (centered: 1200/2 - 300/2), y=640 (800-140-20)
-    this.yard = new Yard(450, 300, 300, 140);
+    this.yard = new Yard(500, 370, 300, 140);
     this.gameContainer.addChild(this.yard.getGraphics());
     this.gameContainer.addChild(this.yard.getBorderGraphics());
 
