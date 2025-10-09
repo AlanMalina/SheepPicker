@@ -1,9 +1,11 @@
-import { Graphics } from 'pixi.js';
+// src/entities/Yard.ts
+import { Graphics, Sprite, Texture, Container } from 'pixi.js';
 import { Vector2D } from '../utils/Vector2D';
 
 export class Yard {
   private graphics: Graphics;
   private borderGraphics: Graphics;
+  private sprite: Sprite | null = null;
   private x: number;
   private y: number;
   private width: number;
@@ -18,10 +20,43 @@ export class Yard {
     this.height = height;
     this.graphics = new Graphics();
     this.borderGraphics = new Graphics();
+    this.loadTexture();
     this.draw();
   }
 
+  private loadTexture(): void {
+    try {
+      console.log('[Yard] Loading grass texture...');
+      const texture = Texture.from('grass.jpg');
+      this.sprite = new Sprite(texture);
+      
+      this.sprite.x = this.x;
+      this.sprite.y = this.y;
+      
+      const trySetSize = () => {
+        if (!this.sprite) return;
+        
+        const w = this.sprite.texture.width;
+        const h = this.sprite.texture.height;
+        
+        if (w > 0 && h > 0) {
+          this.sprite.width = this.width;
+          this.sprite.height = this.height;
+          this.graphics.addChild(this.sprite);
+          console.log('[Yard] ✓ Grass texture applied');
+        } else {
+          requestAnimationFrame(trySetSize);
+        }
+      };
+      
+      trySetSize();
+    } catch (error) {
+      console.warn('[Yard] Failed to load grass texture, using yellow fill', error);
+    }
+  }
+
   private draw(): void {
+    // Draw yellow background as fallback (will be covered by sprite if loaded)
     this.graphics.rect(this.x, this.y, this.width, this.height);
     this.graphics.fill(0xffff00);
   }
