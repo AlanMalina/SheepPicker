@@ -1,5 +1,4 @@
-// src/Game.ts
-import { Application, Container, Text, Assets } from 'pixi.js';
+import { Application, Container, Graphics, Text, Assets } from 'pixi.js';
 import { Hero } from './entities/Hero';
 import { Animal } from './entities/Animal';
 import { Yard } from './entities/Yard';
@@ -20,7 +19,11 @@ export class Game {
   private scoreText!: Text;
   private collectedText!: Text;
   private messageText!: Text;
+  private timerText!: Text;
   private animalSpawner!: AnimalSpawner;
+  private gameTime: number = 60; // 60 seconds
+  private isGameOver: boolean = false;
+  private gameOverContainer!: Container;
 
   constructor(app: Application) {
     this.app = app;
@@ -73,15 +76,28 @@ export class Game {
     });
     this.messageText.y = 50;
     this.app.stage.addChild(this.messageText);
+
+    // Timer text at top center
+    this.timerText = new Text({
+      text: '1:00',
+      style: {
+        fontSize: 32,
+        fill: 0xffffff,
+        fontWeight: 'bold',
+      },
+    });
+    this.timerText.y = 10;
+    this.app.stage.addChild(this.timerText);
+    this.updateTimerPosition();
   }
 
   private initGameObjects(): void {
     console.log('Initializing game objects...');
     
-    // Create yard - centered at bottom
-    // Canvas is 1200x800, yard is 300x140
-    // Position: x=450 (centered: 1200/2 - 300/2), y=640 (800-140-20)
-    this.yard = new Yard(500, 370, 300, 140);
+    // Create yard - positioned at bottom right with proper margins
+    // Canvas: 1200x800, Yard: 300x140
+    // Position: x=880 (1200-300-20), y=640 (800-140-20)
+    this.yard = new Yard(500, 400, 300, 140);
     this.gameContainer.addChild(this.yard.getGraphics());
     this.gameContainer.addChild(this.yard.getBorderGraphics());
 
@@ -114,6 +130,7 @@ export class Game {
     this.app.stage.eventMode = 'static';
     this.app.stage.hitArea = this.app.screen;
     this.app.stage.on('pointerdown', (event) => {
+      if (this.isGameOver) return;
       const pos = event.global;
       this.hero.moveTo(new Vector2D(pos.x, pos.y));
     });
@@ -121,6 +138,10 @@ export class Game {
     // Keyboard controls (WASD)
     const keys: Record<string, boolean> = {};
     const updateHeroDirection = () => {
+      if (this.isGameOver) {
+        this.hero.setVelocityDirection(0, 0);
+        return;
+      }
       let xDir = 0;
       let yDir = 0;
       if (keys['KeyW'] || keys['ArrowUp']) yDir -= 1;
@@ -146,10 +167,110 @@ export class Game {
     this.initGameObjects();
     this.setupEventListeners();
     this.animalSpawner = new AnimalSpawner(this, 1200, 800);
-    this.app.ticker.add(() => this.update(this.app.ticker.deltaTime));
+    this.app.ticker.add((ticker) => this.update(ticker.deltaTime));
+  }
+
+  private updateTimerPosition(): void {
+    this.timerText.x = (this.app.screen.width - this.timerText.width) / 2;
+  }
+
+  private updateTimer(delta: number): void {
+    if (this.isGameOver) return;
+    
+    // Decrease time (delta is in frames, 60 fps = 1 second per 60 frames)
+    this.gameTime -= delta / 60;
+    
+    if (this.gameTime <= 0) {
+      this.gameTime = 0;
+      this.endGame();
+    }
+    
+    // Format time as MM:SS
+    const minutes = Math.floor(this.gameTime / 60);
+    const seconds = Math.floor(this.gameTime % 60);
+    this.timerText.text = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    this.updateTimerPosition();
+    
+    // Change color when time is running out
+    if (this.gameTime <= 10) {
+      this.timerText.style.fill = 0xff0000; // Red
+    } else if (this.gameTime <= 30) {
+      this.timerText.style.fill = 0xffaa00; // Orange
+    }
+  }
+
+  private endGame(): void {
+    this.isGameOver = true;
+    
+    // Stop hero movement
+    this.hero.setVelocityDirection(0, 0);
+    
+    // Create game over screen
+    this.gameOverContainer = new Container();
+    
+    // Semi-transparent background
+    const overlay = new Graphics();
+    overlay.rect(0, 0, 1200, 800);
+    overlay.fill({ color: 0x000000, alpha: 0.7 });
+    this.gameOverContainer.addChild(overlay);
+    
+    // Game over panel - centered on screen
+    const panelWidth = 600;
+    const panelHeight = 400;
+    const panelX = (1200 - panelWidth) / 2; // 300
+    const panelY = (800 - panelHeight) / 4; // 200
+    
+    const panel = new Graphics();
+    panel.rect(panelX, panelY, panelWidth, panelHeight);
+    panel.fill(0x2a2a2a);
+    panel.stroke({ width: 4, color: 0xffaa00 });
+    this.gameOverContainer.addChild(panel);
+    
+    // Game Over text
+    const gameOverText = new Text({
+      text: 'GAME OVER',
+      style: {
+        fontSize: 64,
+        fill: 0xffaa00,
+        fontWeight: 'bold',
+      },
+    });
+    gameOverText.x = 600 - gameOverText.width / 2;
+    gameOverText.y = panelY + 60;
+    this.gameOverContainer.addChild(gameOverText);
+    
+    // Final Score text
+    const finalScoreText = new Text({
+      text: `Final Score: ${this.scoreManager.getScore()}`,
+      style: {
+        fontSize: 48,
+        fill: 0xffffff,
+        fontWeight: 'bold',
+      },
+    });
+    finalScoreText.x = 600 - finalScoreText.width / 2;
+    finalScoreText.y = panelY + 180;
+    this.gameOverContainer.addChild(finalScoreText);
+    
+    // Restart hint
+    const restartText = new Text({
+      text: 'Refresh page to play again',
+      style: {
+        fontSize: 24,
+        fill: 0xaaaaaa,
+      },
+    });
+    restartText.x = 600 - restartText.width / 2;
+    restartText.y = panelY + 300;
+    this.gameOverContainer.addChild(restartText);
+    
+    this.app.stage.addChild(this.gameOverContainer);
   }
 
   private update(delta: number): void {
+    if (this.isGameOver) return;
+    
+    this.updateTimer(delta);
     this.hero.update(delta);
     this.animalSpawner.update(delta);
 
