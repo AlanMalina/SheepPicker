@@ -1,3 +1,4 @@
+// src/Game.ts
 import { Application, Container, Graphics, Text, Assets } from 'pixi.js';
 import { Hero } from './entities/Hero';
 import { Animal } from './entities/Animal';
@@ -23,7 +24,9 @@ export class Game {
   private animalSpawner!: AnimalSpawner;
   private gameTime: number = 60; // 60 seconds
   private isGameOver: boolean = false;
+  private isGameStarted: boolean = false;
   private gameOverContainer!: Container;
+  private startMenuContainer!: Container;
 
   constructor(app: Application) {
     this.app = app;
@@ -97,7 +100,7 @@ export class Game {
     // Create yard - positioned at bottom right with proper margins
     // Canvas: 1200x800, Yard: 300x140
     // Position: x=880 (1200-300-20), y=640 (800-140-20)
-    this.yard = new Yard(500, 400, 300, 140);
+    this.yard = new Yard(500, 350, 300, 140);
     this.gameContainer.addChild(this.yard.getGraphics());
     this.gameContainer.addChild(this.yard.getBorderGraphics());
 
@@ -130,7 +133,7 @@ export class Game {
     this.app.stage.eventMode = 'static';
     this.app.stage.hitArea = this.app.screen;
     this.app.stage.on('pointerdown', (event) => {
-      if (this.isGameOver) return;
+      if (this.isGameOver || !this.isGameStarted) return;
       const pos = event.global;
       this.hero.moveTo(new Vector2D(pos.x, pos.y));
     });
@@ -138,7 +141,7 @@ export class Game {
     // Keyboard controls (WASD)
     const keys: Record<string, boolean> = {};
     const updateHeroDirection = () => {
-      if (this.isGameOver) {
+      if (this.isGameOver || !this.isGameStarted) {
         this.hero.setVelocityDirection(0, 0);
         return;
       }
@@ -167,7 +170,146 @@ export class Game {
     this.initGameObjects();
     this.setupEventListeners();
     this.animalSpawner = new AnimalSpawner(this, 1200, 800);
+    this.showStartMenu();
     this.app.ticker.add((ticker) => this.update(ticker.deltaTime));
+  }
+
+  private showStartMenu(): void {
+    this.startMenuContainer = new Container();
+    
+    // Semi-transparent background
+    const overlay = new Graphics();
+    overlay.rect(0, 0, 1200, 800);
+    overlay.fill({ color: 0x000000, alpha: 0.7 });
+    this.startMenuContainer.addChild(overlay);
+    
+    // Menu panel - centered on screen
+    const panelWidth = 600;
+    const panelHeight = 400;
+    const panelX = (1200 - panelWidth) / 2;
+    const panelY = (800 - panelHeight) / 4;
+    
+    const panel = new Graphics();
+    panel.rect(panelX, panelY, panelWidth, panelHeight);
+    panel.fill(0x2a2a2a);
+    panel.stroke({ width: 4, color: 0x4CAF50 });
+    this.startMenuContainer.addChild(panel);
+    
+    // Game title
+    const titleText = new Text({
+      text: 'SHEEP PICKER',
+      style: {
+        fontSize: 56,
+        fill: 0x4CAF50,
+        fontWeight: 'bold',
+      },
+    });
+    titleText.x = 600 - titleText.width / 2;
+    titleText.y = panelY + 60;
+    this.startMenuContainer.addChild(titleText);
+    
+    // Instructions
+    const instructionsText = new Text({
+      text: 'Collect sheeps and guide them to the yard!\nYou have 60 seconds.',
+      style: {
+        fontSize: 22,
+        fill: 0xffffff,
+        align: 'center',
+      },
+    });
+    instructionsText.x = 600 - instructionsText.width / 2;
+    instructionsText.y = panelY + 160;
+    this.startMenuContainer.addChild(instructionsText);
+    
+    // Play button
+    const buttonWidth = 200;
+    const buttonHeight = 60;
+    const buttonX = 600 - buttonWidth / 2;
+    const buttonY = panelY + 260;
+    
+    const playButton = new Graphics();
+    playButton.rect(buttonX, buttonY, buttonWidth, buttonHeight);
+    playButton.fill(0x4CAF50);
+    playButton.stroke({ width: 2, color: 0xffffff });
+    playButton.eventMode = 'static';
+    playButton.cursor = 'pointer';
+    this.startMenuContainer.addChild(playButton);
+    
+    const playText = new Text({
+      text: 'PLAY',
+      style: {
+        fontSize: 32,
+        fill: 0xffffff,
+        fontWeight: 'bold',
+      },
+    });
+    playText.x = 600 - playText.width / 2;
+    playText.y = buttonY + 15;
+    this.startMenuContainer.addChild(playText);
+    
+    // Button hover effect
+    playButton.on('pointerover', () => {
+      playButton.clear();
+      playButton.rect(buttonX, buttonY, buttonWidth, buttonHeight);
+      playButton.fill(0x66BB6A);
+      playButton.stroke({ width: 2, color: 0xffffff });
+    });
+    
+    playButton.on('pointerout', () => {
+      playButton.clear();
+      playButton.rect(buttonX, buttonY, buttonWidth, buttonHeight);
+      playButton.fill(0x4CAF50);
+      playButton.stroke({ width: 2, color: 0xffffff });
+    });
+    
+    // Button click
+    playButton.on('pointerdown', () => {
+      this.startGame();
+    });
+    
+    this.app.stage.addChild(this.startMenuContainer);
+  }
+
+  private startGame(): void {
+    this.isGameStarted = true;
+    this.isGameOver = false;
+    this.gameTime = 60;
+    
+    // Remove start menu
+    if (this.startMenuContainer) {
+      this.app.stage.removeChild(this.startMenuContainer);
+    }
+    
+    // Reset timer display
+    this.timerText.text = '1:00';
+    this.timerText.style.fill = 0xffffff;
+    this.updateTimerPosition();
+  }
+
+  private resetGame(): void {
+    // Reset score
+    this.scoreManager.resetScore();
+    this.updateScoreDisplay();
+    
+    // Reset hero
+    this.hero.setVelocityDirection(0, 0);
+    this.hero.getPosition().x = 150;
+    this.hero.getPosition().y = 150;
+    
+    // Clear all animals
+    this.animals.forEach(animal => {
+      this.gameContainer.removeChild(animal.getGraphics());
+    });
+    this.animals = [];
+    
+    // Spawn new animals
+    this.spawnInitialAnimals();
+    
+    // Reset collected count
+    while (this.hero.getFollowerCount() > 0) {
+      this.hero.removeFollower();
+    }
+    this.updateCollectedDisplay();
   }
 
   private updateTimerPosition(): void {
@@ -175,7 +317,7 @@ export class Game {
   }
 
   private updateTimer(delta: number): void {
-    if (this.isGameOver) return;
+    if (this.isGameOver || !this.isGameStarted) return;
     
     // Decrease time (delta is in frames, 60 fps = 1 second per 60 frames)
     this.gameTime -= delta / 60;
@@ -201,6 +343,7 @@ export class Game {
 
   private endGame(): void {
     this.isGameOver = true;
+    this.isGameStarted = false;
     
     // Stop hero movement
     this.hero.setVelocityDirection(0, 0);
@@ -217,8 +360,8 @@ export class Game {
     // Game over panel - centered on screen
     const panelWidth = 600;
     const panelHeight = 400;
-    const panelX = (1200 - panelWidth) / 2; // 300
-    const panelY = (800 - panelHeight) / 4; // 200
+    const panelX = (1200 - panelWidth) / 2;
+    const panelY = (800 - panelHeight) / 4;
     
     const panel = new Graphics();
     panel.rect(panelX, panelY, panelWidth, panelHeight);
@@ -249,26 +392,62 @@ export class Game {
       },
     });
     finalScoreText.x = 600 - finalScoreText.width / 2;
-    finalScoreText.y = panelY + 180;
+    finalScoreText.y = panelY + 160;
     this.gameOverContainer.addChild(finalScoreText);
     
-    // Restart hint
-    const restartText = new Text({
-      text: 'Refresh page to play again',
+    // Play Again button
+    const buttonWidth = 200;
+    const buttonHeight = 60;
+    const buttonX = 600 - buttonWidth / 2;
+    const buttonY = panelY + 280;
+    
+    const playAgainButton = new Graphics();
+    playAgainButton.rect(buttonX, buttonY, buttonWidth, buttonHeight);
+    playAgainButton.fill(0x4CAF50);
+    playAgainButton.stroke({ width: 2, color: 0xffffff });
+    playAgainButton.eventMode = 'static';
+    playAgainButton.cursor = 'pointer';
+    this.gameOverContainer.addChild(playAgainButton);
+    
+    const playAgainText = new Text({
+      text: 'PLAY AGAIN',
       style: {
-        fontSize: 24,
-        fill: 0xaaaaaa,
+        fontSize: 28,
+        fill: 0xffffff,
+        fontWeight: 'bold',
       },
     });
-    restartText.x = 600 - restartText.width / 2;
-    restartText.y = panelY + 300;
-    this.gameOverContainer.addChild(restartText);
+    playAgainText.x = 600 - playAgainText.width / 2;
+    playAgainText.y = buttonY + 16;
+    this.gameOverContainer.addChild(playAgainText);
+    
+    // Button hover effect
+    playAgainButton.on('pointerover', () => {
+      playAgainButton.clear();
+      playAgainButton.rect(buttonX, buttonY, buttonWidth, buttonHeight);
+      playAgainButton.fill(0x66BB6A);
+      playAgainButton.stroke({ width: 2, color: 0xffffff });
+    });
+    
+    playAgainButton.on('pointerout', () => {
+      playAgainButton.clear();
+      playAgainButton.rect(buttonX, buttonY, buttonWidth, buttonHeight);
+      playAgainButton.fill(0x4CAF50);
+      playAgainButton.stroke({ width: 2, color: 0xffffff });
+    });
+    
+    // Button click
+    playAgainButton.on('pointerdown', () => {
+      this.app.stage.removeChild(this.gameOverContainer);
+      this.resetGame();
+      this.startGame();
+    });
     
     this.app.stage.addChild(this.gameOverContainer);
   }
 
   private update(delta: number): void {
-    if (this.isGameOver) return;
+    if (this.isGameOver || !this.isGameStarted) return;
     
     this.updateTimer(delta);
     this.hero.update(delta);
