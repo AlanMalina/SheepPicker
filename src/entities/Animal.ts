@@ -135,7 +135,7 @@ export class Animal extends MovableEntity {
         const borderSize = 2;
         const margin = this.radius + 5;
         this.position.x = Math.max(borderSize + margin, Math.min(1200 - borderSize - margin, this.position.x));
-        this.position.y = Math.max(borderSize + margin, Math.min(800 - borderSize - margin, this.position.y));
+        this.position.y = Math.max(borderSize + margin, Math.min(800 - borderSize - margin - 200, this.position.y));
         
         this.container.x = this.position.x;
         this.container.y = this.position.y;
