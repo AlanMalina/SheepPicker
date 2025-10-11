@@ -10,6 +10,9 @@ import { Vector2D } from './utils/Vector2D';
 export class Game {
   private static readonly HERO_RADIUS = 25;
   private static readonly ANIMAL_RADIUS = 15;
+  private static readonly NORMAL_VOLUME = 0.3; // <-- ADD THIS
+  private static readonly FADED_VOLUME = 0.05; // <-- ADD THIS
+  private static readonly FADE_RATE = 0.005;  // <-- ADD THIS (if used)
 
   private app: Application;
   private gameContainer: Container;
@@ -27,6 +30,10 @@ export class Game {
   private isGameStarted: boolean = false;
   private gameOverContainer!: Container;
   private startMenuContainer!: Container;
+  private isFadingMusic: boolean = false;
+  private targetVolume: number = 0.3; // Store the current desired volume (0.3 is normal)
+  private fadeRate: number = 0.005; // How much to change volume per frame (adjust for speed)
+  // --------------------------------------
 
   constructor(app: Application) {
     this.app = app;
@@ -46,8 +53,8 @@ export class Game {
       
       // Load background music
       this.backgroundMusic = new Audio('slipknot-psychosocial.mp3');
-      this.backgroundMusic.loop = true; // Loop the music
-      this.backgroundMusic.volume = 0.3; // Set volume (0.0 to 1.0)
+      this.backgroundMusic.loop = true; // Loop the music
+      this.backgroundMusic.volume = Game.NORMAL_VOLUME; // Use the static constant
       
       console.log('Assets loaded successfully!');
     } catch (err) {
@@ -102,6 +109,32 @@ export class Game {
     this.timerText.y = 10;
     this.app.stage.addChild(this.timerText);
     this.updateTimerPosition();
+
+    const muteButton = new Text({
+    text: '🔊',
+    style: {
+      fontSize: 32,
+      fill: 0xffffff,
+    },
+  });
+    muteButton.x = this.app.screen.width - 190;
+    muteButton.y = 5;
+    muteButton.eventMode = 'static';
+    muteButton.cursor = 'pointer';
+    
+    muteButton.on('pointerdown', () => {
+      if (this.backgroundMusic) {
+        if (this.backgroundMusic.muted) {
+          this.backgroundMusic.muted = false;
+          muteButton.text = '🔊'; 
+        } else {
+          this.backgroundMusic.muted = true;
+          muteButton.text = '🔇';
+        }
+      }
+    });
+  
+    this.app.stage.addChild(muteButton);
   }
 
   private initGameObjects(): void {
@@ -245,6 +278,7 @@ export class Game {
     panel.stroke({ width: 4, color: 0x4CAF50 });
     this.startMenuContainer.addChild(panel);
     
+    
     // Game title
     const titleText = new Text({
       text: 'SHEEP PICKER',
@@ -340,6 +374,9 @@ export class Game {
     // Start background music
     if (this.backgroundMusic) {
       this.backgroundMusic.currentTime = 0; // Reset to beginning
+      this.backgroundMusic.volume = 0.05; // Start it low/where it was from game over
+      this.targetVolume = 0.3; // Set the normal target volume
+      this.isFadingMusic = true; // Start fading UP
       this.backgroundMusic.play().catch(err => {
         console.warn('Failed to play background music:', err);
       });
@@ -414,10 +451,16 @@ export class Game {
     this.isGameStarted = false;
     
     // Stop background music
-    if (this.backgroundMusic) {
-      this.backgroundMusic.pause();
-    }
+    // if (this.backgroundMusic) {
+    //   this.backgroundMusic.pause();
+    // }
     
+    if (this.backgroundMusic && !this.backgroundMusic.muted) {
+      // Start the fade to a low volume
+      this.targetVolume = Game.FADED_VOLUME; 
+      this.isFadingMusic = true; // IMPORTANT: Activate the continuous update
+    }
+
     // Stop hero movement
     this.hero.setVelocityDirection(0, 0);
     
@@ -526,34 +569,63 @@ export class Game {
     
     this.gameOverContainer.addChild(buttonContainer);
     this.app.stage.addChild(this.gameOverContainer);
+
+    // const muteButton = new Text({
+    //   text: '🔊',
+    //   style: {
+    //     fontSize: 32,
+    //     fill: 0xffffff,
+    //   },
+    // });
+    // muteButton.x = this.app.screen.width - 350;
+    // muteButton.y = 105;
+    // muteButton.eventMode = 'static';
+    // muteButton.cursor = 'pointer';
+    
+    // muteButton.on('pointerdown', () => {
+    //   if (this.backgroundMusic) {
+    //     if (this.backgroundMusic.muted) {
+    //       this.backgroundMusic.muted = false;
+    //       muteButton.text = '🔊'; 
+    //     } else {
+    //       this.backgroundMusic.muted = true;
+    //       muteButton.text = '🔇';
+    //     }
+    //   }
+    // });
+  
+    // this.app.stage.addChild(muteButton);
     
     console.log('Game over screen displayed');
   }
 
   private update(delta: number): void {
-    if (this.isGameOver || !this.isGameStarted) return;
-    
-    this.updateTimer(delta);
-    this.hero.update(delta);
-    this.animalSpawner.update(delta);
+    // This must be called first so the music fades out when isGameOver is true.
+    this.updateMusicFade(delta);
 
-    this.animals.forEach((animal) => {
-      animal.update(delta, this.hero);
+    if (this.isGameOver || !this.isGameStarted) return;
+    
+    this.updateTimer(delta);
+    this.hero.update(delta);
+    this.animalSpawner.update(delta);
 
-      if (animal.isInYard(this.yard) && !animal.isScored()) {
-        animal.markAsScored();
-        this.scoreManager.addScore(1);
-        this.updateScoreDisplay();
-      }
-    });
+    this.animals.forEach((animal) => {
+      animal.update(delta, this.hero);
 
-    this.checkAnimalCollection();
-    this.removeCompletedAnimals();
-    this.updateCollectedDisplay();
-    
-    const isMaxReached = this.hero.getFollowerCount() >= 5;
-    this.yard.setHighlight(isMaxReached, delta);
-  }
+      if (animal.isInYard(this.yard) && !animal.isScored()) {
+        animal.markAsScored();
+        this.scoreManager.addScore(1);
+        this.updateScoreDisplay();
+      }
+    });
+
+    this.checkAnimalCollection();
+    this.removeCompletedAnimals();
+    this.updateCollectedDisplay();
+    
+    const isMaxReached = this.hero.getFollowerCount() >= 5;
+    this.yard.setHighlight(isMaxReached, delta);
+  }
 
   private checkAnimalCollection(): void {
     const collectionRadius = 50;
@@ -600,4 +672,27 @@ export class Game {
 
     this.messageText.x = Math.max(0, (this.app.screen.width - this.messageText.width) / 2);
   }
+
+  private updateMusicFade(delta: number): void {
+    if (!this.isFadingMusic || !this.backgroundMusic) return;
+
+    // Calculate the step to move towards the target volume
+    const step = this.fadeRate * delta; // Multiply by delta for frame-rate independence
+
+    if (this.backgroundMusic.volume > this.targetVolume) {
+      // Fading DOWN
+      this.backgroundMusic.volume = Math.max(this.targetVolume, this.backgroundMusic.volume - step);
+      
+      if (this.backgroundMusic.volume === this.targetVolume) {
+        this.isFadingMusic = false; // Stop fading when target reached
+      }
+    } else if (this.backgroundMusic.volume < this.targetVolume) {
+      // Fading UP (used when starting a new game)
+      this.backgroundMusic.volume = Math.min(this.targetVolume, this.backgroundMusic.volume + step);
+
+      if (this.backgroundMusic.volume === this.targetVolume) {
+        this.isFadingMusic = false; // Stop fading when target reached
+      }
+    }
+  }
 }
