@@ -12,7 +12,7 @@ export class Game {
   private static readonly ANIMAL_RADIUS = 15;
   private static readonly NORMAL_VOLUME = 0.3; // <-- ADD THIS
   private static readonly FADED_VOLUME = 0.05; // <-- ADD THIS
-  private static readonly FADE_RATE = 0.005;  // <-- ADD THIS (if used)
+  private static readonly FADE_RATE = 0.02;  // <-- ADD THIS (if used)
 
   private app: Application;
   private gameContainer: Container;
@@ -25,7 +25,8 @@ export class Game {
   private messageText!: Text;
   private timerText!: Text;
   private animalSpawner!: AnimalSpawner;
-  private gameTime: number = 60; // 60 seconds
+  private gameTime: number = 20; // 60 seconds
+  // private gameTime: number = 10;
   private isGameOver: boolean = false;
   private isGameStarted: boolean = false;
   private gameOverContainer!: Container;
@@ -364,6 +365,7 @@ export class Game {
     this.isGameStarted = true;
     this.isGameOver = false;
     this.gameTime = 60;
+    // this.gameTime = 10;
     
     // Remove start menu
     if (this.startMenuContainer) {
@@ -384,6 +386,7 @@ export class Game {
     
     // Reset timer display
     this.timerText.text = '1:00';
+    // this.timerText.text = '0:10';
     this.timerText.style.fill = 0xffffff;
     this.updateTimerPosition();
     
