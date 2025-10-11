@@ -166,21 +166,61 @@ export class Game {
   }
 
   public async start(): Promise<void> {
+    // Show loading state
+    this.showLoadingScreen();
+    
     await this.loadAssets();
     this.initGameObjects();
     this.setupEventListeners();
     this.animalSpawner = new AnimalSpawner(this, 1200, 800);
+    
+    // Hide loading and show start menu
+    this.hideLoadingScreen();
     this.showStartMenu();
+    
     this.app.ticker.add((ticker) => this.update(ticker.deltaTime));
+  }
+
+  private showLoadingScreen(): void {
+    const loadingContainer = new Container();
+    loadingContainer.label = 'loading'; // Add label for easy finding
+    
+    const overlay = new Graphics();
+    overlay.rect(0, 0, 1200, 800);
+    overlay.fill({ color: 0x228B22, alpha: 1 });
+    loadingContainer.addChild(overlay);
+    
+    const loadingText = new Text({
+      text: 'Loading...',
+      style: {
+        fontSize: 48,
+        fill: 0xffffff,
+        fontWeight: 'bold',
+      },
+    });
+    loadingText.x = 600 - loadingText.width / 2;
+    loadingText.y = 400 - loadingText.height / 2;
+    loadingContainer.addChild(loadingText);
+    
+    this.app.stage.addChild(loadingContainer);
+  }
+
+  private hideLoadingScreen(): void {
+    const loadingContainer = this.app.stage.children.find(child => child.label === 'loading');
+    if (loadingContainer) {
+      this.app.stage.removeChild(loadingContainer);
+    }
   }
 
   private showStartMenu(): void {
     this.startMenuContainer = new Container();
+    this.startMenuContainer.label = 'startMenu'; // Add label
     
     // Semi-transparent background
     const overlay = new Graphics();
     overlay.rect(0, 0, 1200, 800);
     overlay.fill({ color: 0x000000, alpha: 0.7 });
+    overlay.eventMode = 'static'; // Block clicks to game behind
     this.startMenuContainer.addChild(overlay);
     
     // Menu panel - centered on screen
@@ -221,19 +261,21 @@ export class Game {
     instructionsText.y = panelY + 160;
     this.startMenuContainer.addChild(instructionsText);
     
-    // Play button
+    // Play button container
+    const buttonContainer = new Container();
+    buttonContainer.x = 600;
+    buttonContainer.y = panelY + 290;
+    buttonContainer.eventMode = 'static';
+    buttonContainer.cursor = 'pointer';
+    
     const buttonWidth = 200;
     const buttonHeight = 60;
-    const buttonX = 600 - buttonWidth / 2;
-    const buttonY = panelY + 260;
     
     const playButton = new Graphics();
-    playButton.rect(buttonX, buttonY, buttonWidth, buttonHeight);
+    playButton.rect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight);
     playButton.fill(0x4CAF50);
     playButton.stroke({ width: 2, color: 0xffffff });
-    playButton.eventMode = 'static';
-    playButton.cursor = 'pointer';
-    this.startMenuContainer.addChild(playButton);
+    buttonContainer.addChild(playButton);
     
     const playText = new Text({
       text: 'PLAY',
@@ -243,34 +285,38 @@ export class Game {
         fontWeight: 'bold',
       },
     });
-    playText.x = 600 - playText.width / 2;
-    playText.y = buttonY + 15;
-    this.startMenuContainer.addChild(playText);
+    playText.anchor.set(0.5);
+    buttonContainer.addChild(playText);
     
     // Button hover effect
-    playButton.on('pointerover', () => {
+    buttonContainer.on('pointerover', () => {
       playButton.clear();
-      playButton.rect(buttonX, buttonY, buttonWidth, buttonHeight);
+      playButton.rect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight);
       playButton.fill(0x66BB6A);
       playButton.stroke({ width: 2, color: 0xffffff });
     });
     
-    playButton.on('pointerout', () => {
+    buttonContainer.on('pointerout', () => {
       playButton.clear();
-      playButton.rect(buttonX, buttonY, buttonWidth, buttonHeight);
+      playButton.rect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight);
       playButton.fill(0x4CAF50);
       playButton.stroke({ width: 2, color: 0xffffff });
     });
     
-    // Button click
-    playButton.on('pointerdown', () => {
+    // Button click - immediately start game
+    buttonContainer.on('pointerdown', () => {
+      console.log('Play button clicked!');
       this.startGame();
     });
     
+    this.startMenuContainer.addChild(buttonContainer);
     this.app.stage.addChild(this.startMenuContainer);
+    
+    console.log('Start menu displayed');
   }
 
   private startGame(): void {
+    console.log('Starting game...');
     this.isGameStarted = true;
     this.isGameOver = false;
     this.gameTime = 60;
@@ -278,12 +324,15 @@ export class Game {
     // Remove start menu
     if (this.startMenuContainer) {
       this.app.stage.removeChild(this.startMenuContainer);
+      this.startMenuContainer.destroy({ children: true });
     }
     
     // Reset timer display
     this.timerText.text = '1:00';
     this.timerText.style.fill = 0xffffff;
     this.updateTimerPosition();
+    
+    console.log('Game started!');
   }
 
   private resetGame(): void {
@@ -342,6 +391,7 @@ export class Game {
   }
 
   private endGame(): void {
+    console.log('Game ending...');
     this.isGameOver = true;
     this.isGameStarted = false;
     
@@ -350,11 +400,13 @@ export class Game {
     
     // Create game over screen
     this.gameOverContainer = new Container();
+    this.gameOverContainer.label = 'gameOver';
     
     // Semi-transparent background
     const overlay = new Graphics();
     overlay.rect(0, 0, 1200, 800);
     overlay.fill({ color: 0x000000, alpha: 0.7 });
+    overlay.eventMode = 'static'; // Block clicks to game behind
     this.gameOverContainer.addChild(overlay);
     
     // Game over panel - centered on screen
@@ -395,19 +447,21 @@ export class Game {
     finalScoreText.y = panelY + 160;
     this.gameOverContainer.addChild(finalScoreText);
     
-    // Play Again button
+    // Play Again button container
+    const buttonContainer = new Container();
+    buttonContainer.x = 600;
+    buttonContainer.y = panelY + 310;
+    buttonContainer.eventMode = 'static';
+    buttonContainer.cursor = 'pointer';
+    
     const buttonWidth = 200;
     const buttonHeight = 60;
-    const buttonX = 600 - buttonWidth / 2;
-    const buttonY = panelY + 280;
     
     const playAgainButton = new Graphics();
-    playAgainButton.rect(buttonX, buttonY, buttonWidth, buttonHeight);
+    playAgainButton.rect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight);
     playAgainButton.fill(0x4CAF50);
     playAgainButton.stroke({ width: 2, color: 0xffffff });
-    playAgainButton.eventMode = 'static';
-    playAgainButton.cursor = 'pointer';
-    this.gameOverContainer.addChild(playAgainButton);
+    buttonContainer.addChild(playAgainButton);
     
     const playAgainText = new Text({
       text: 'PLAY AGAIN',
@@ -417,33 +471,37 @@ export class Game {
         fontWeight: 'bold',
       },
     });
-    playAgainText.x = 600 - playAgainText.width / 2;
-    playAgainText.y = buttonY + 16;
-    this.gameOverContainer.addChild(playAgainText);
+    playAgainText.anchor.set(0.5);
+    buttonContainer.addChild(playAgainText);
     
     // Button hover effect
-    playAgainButton.on('pointerover', () => {
+    buttonContainer.on('pointerover', () => {
       playAgainButton.clear();
-      playAgainButton.rect(buttonX, buttonY, buttonWidth, buttonHeight);
+      playAgainButton.rect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight);
       playAgainButton.fill(0x66BB6A);
       playAgainButton.stroke({ width: 2, color: 0xffffff });
     });
     
-    playAgainButton.on('pointerout', () => {
+    buttonContainer.on('pointerout', () => {
       playAgainButton.clear();
-      playAgainButton.rect(buttonX, buttonY, buttonWidth, buttonHeight);
+      playAgainButton.rect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight);
       playAgainButton.fill(0x4CAF50);
       playAgainButton.stroke({ width: 2, color: 0xffffff });
     });
     
-    // Button click
-    playAgainButton.on('pointerdown', () => {
+    // Button click - immediately restart game
+    buttonContainer.on('pointerdown', () => {
+      console.log('Play Again clicked!');
       this.app.stage.removeChild(this.gameOverContainer);
+      this.gameOverContainer.destroy({ children: true });
       this.resetGame();
       this.startGame();
     });
     
+    this.gameOverContainer.addChild(buttonContainer);
     this.app.stage.addChild(this.gameOverContainer);
+    
+    console.log('Game over screen displayed');
   }
 
   private update(delta: number): void {
