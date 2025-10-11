@@ -10,9 +10,9 @@ import { Vector2D } from './utils/Vector2D';
 export class Game {
   private static readonly HERO_RADIUS = 25;
   private static readonly ANIMAL_RADIUS = 15;
-  private static readonly NORMAL_VOLUME = 0.3; // <-- ADD THIS
-  private static readonly FADED_VOLUME = 0.05; // <-- ADD THIS
-  private static readonly FADE_RATE = 0.02;  // <-- ADD THIS (if used)
+  private static readonly NORMAL_VOLUME = 0.3;
+  private static readonly FADED_VOLUME = 0.1;
+  private static readonly FADE_RATE = 2;
 
   private app: Application;
   private gameContainer: Container;
@@ -25,16 +25,15 @@ export class Game {
   private messageText!: Text;
   private timerText!: Text;
   private animalSpawner!: AnimalSpawner;
-  private gameTime: number = 20; // 60 seconds
-  // private gameTime: number = 10;
+  private gameTime: number = 60; // 60 seconds
   private isGameOver: boolean = false;
   private isGameStarted: boolean = false;
   private gameOverContainer!: Container;
   private startMenuContainer!: Container;
   private isFadingMusic: boolean = false;
-  private targetVolume: number = 0.3; // Store the current desired volume (0.3 is normal)
-  private fadeRate: number = 0.005; // How much to change volume per frame (adjust for speed)
-  // --------------------------------------
+  private targetVolume: number = 0.3;
+  private fadeRate: number = 0.005;
+  private backgroundMusic: HTMLAudioElement | null = null;
 
   constructor(app: Application) {
     this.app = app;
@@ -44,9 +43,6 @@ export class Game {
     this.initUI();
   }
 
-  private backgroundMusic: HTMLAudioElement | null = null;
-
-  // Update loadAssets method
   private async loadAssets(): Promise<void> {
     try {
       console.log('Loading game assets...');
@@ -54,15 +50,14 @@ export class Game {
       
       // Load background music
       this.backgroundMusic = new Audio('slipknot-psychosocial.mp3');
-      this.backgroundMusic.loop = true; // Loop the music
-      this.backgroundMusic.volume = Game.NORMAL_VOLUME; // Use the static constant
+      this.backgroundMusic.loop = true;
+      this.backgroundMusic.volume = Game.NORMAL_VOLUME;
       
       console.log('Assets loaded successfully!');
     } catch (err) {
       console.warn('Asset load failed, using fallbacks', err);
     }
   }
-
 
   private initUI(): void {
     this.scoreText = new Text({
@@ -113,12 +108,12 @@ export class Game {
     this.updateTimerPosition();
 
     const muteButton = new Text({
-    text: '🔊',
-    style: {
-      fontSize: 32,
-      fill: 0xffffff,
-    },
-  });
+      text: '🔊',
+      style: {
+        fontSize: 32,
+        fill: 0xffffff,
+      },
+    });
     muteButton.x = this.app.screen.width - 190;
     muteButton.y = 5;
     muteButton.eventMode = 'static';
@@ -142,9 +137,7 @@ export class Game {
   private initGameObjects(): void {
     console.log('Initializing game objects...');
     
-    // Create yard - positioned at bottom right with proper margins
-    // Canvas: 1200x800, Yard: 300x140
-    // Position: x=880 (1200-300-20), y=640 (800-140-20)
+    // Create yard
     this.yard = new Yard(500, 350, 300, 140);
     this.gameContainer.addChild(this.yard.getGraphics());
     this.gameContainer.addChild(this.yard.getBorderGraphics());
@@ -167,11 +160,45 @@ export class Game {
   }
 
   public spawnAnimal(x?: number, y?: number): void {
-    const spawnX = x !== undefined ? x : Math.random() * 1100 + 50;
-    const spawnY = y !== undefined ? y : Math.random() * 700 + 50;
+    let spawnX: number;
+    let spawnY: number;
+    
+    if (x !== undefined && y !== undefined) {
+      spawnX = x;
+      spawnY = y;
+    } else {
+      // Keep trying to find a valid spawn position that's not in the yard
+      let attempts = 0;
+      const maxAttempts = 50;
+      
+      do {
+        spawnX = Math.random() * 1100 + 50;
+        spawnY = Math.random() * 700 + 50;
+        attempts++;
+      } while (this.isPositionInYard(spawnX, spawnY) && attempts < maxAttempts);
+      
+      // If we couldn't find a valid position after max attempts, spawn in a safe zone
+      if (attempts >= maxAttempts) {
+        spawnX = 150;
+        spawnY = 150;
+      }
+    }
+    
     const animal = new Animal(spawnX, spawnY, Game.ANIMAL_RADIUS);
     this.animals.push(animal);
     this.gameContainer.addChild(animal.getGraphics());
+  }
+
+  private isPositionInYard(x: number, y: number): boolean {
+    // Yard position: (500, 350), size: 300x140
+    // Add some margin to prevent spawning too close to yard edges
+    const margin = 20;
+    return (
+      x >= 500 - margin &&
+      x <= 500 + 300 + margin &&
+      y >= 350 - margin &&
+      y <= 350 + 140 + margin
+    );
   }
 
   private setupEventListeners(): void {
@@ -228,7 +255,7 @@ export class Game {
 
   private showLoadingScreen(): void {
     const loadingContainer = new Container();
-    loadingContainer.label = 'loading'; // Add label for easy finding
+    loadingContainer.label = 'loading';
     
     const overlay = new Graphics();
     overlay.rect(0, 0, 1200, 800);
@@ -259,13 +286,13 @@ export class Game {
 
   private showStartMenu(): void {
     this.startMenuContainer = new Container();
-    this.startMenuContainer.label = 'startMenu'; // Add label
+    this.startMenuContainer.label = 'startMenu';
     
     // Semi-transparent background
     const overlay = new Graphics();
     overlay.rect(0, 0, 1200, 800);
     overlay.fill({ color: 0x000000, alpha: 0.7 });
-    overlay.eventMode = 'static'; // Block clicks to game behind
+    overlay.eventMode = 'static';
     this.startMenuContainer.addChild(overlay);
     
     // Menu panel - centered on screen
@@ -279,7 +306,6 @@ export class Game {
     panel.fill(0x2a2a2a);
     panel.stroke({ width: 4, color: 0x4CAF50 });
     this.startMenuContainer.addChild(panel);
-    
     
     // Game title
     const titleText = new Text({
@@ -349,7 +375,7 @@ export class Game {
       playButton.stroke({ width: 2, color: 0xffffff });
     });
     
-    // Button click - immediately start game
+    // Button click
     buttonContainer.on('pointerdown', () => {
       console.log('Play button clicked!');
       this.startGame();
@@ -366,7 +392,6 @@ export class Game {
     this.isGameStarted = true;
     this.isGameOver = false;
     this.gameTime = 60;
-    // this.gameTime = 10;
     
     // Remove start menu
     if (this.startMenuContainer) {
@@ -376,10 +401,10 @@ export class Game {
     
     // Start background music
     if (this.backgroundMusic) {
-      this.backgroundMusic.currentTime = 0; // Reset to beginning
-      this.backgroundMusic.volume = 0.05; // Start it low/where it was from game over
-      this.targetVolume = 0.3; // Set the normal target volume
-      this.isFadingMusic = true; // Start fading UP
+      this.backgroundMusic.currentTime = 0;
+      this.backgroundMusic.volume = 0.05;
+      this.targetVolume = 0.3;
+      this.isFadingMusic = true;
       this.backgroundMusic.play().catch(err => {
         console.warn('Failed to play background music:', err);
       });
@@ -387,7 +412,6 @@ export class Game {
     
     // Reset timer display
     this.timerText.text = '1:00';
-    // this.timerText.text = '0:10';
     this.timerText.style.fill = 0xffffff;
     this.updateTimerPosition();
     
@@ -427,7 +451,7 @@ export class Game {
   private updateTimer(delta: number): void {
     if (this.isGameOver || !this.isGameStarted) return;
     
-    // Decrease time (delta is in frames, 60 fps = 1 second per 60 frames)
+    // Decrease time
     this.gameTime -= delta / 60;
     
     if (this.gameTime <= 0) {
@@ -443,9 +467,9 @@ export class Game {
     
     // Change color when time is running out
     if (this.gameTime <= 10) {
-      this.timerText.style.fill = 0xff0000; // Red
+      this.timerText.style.fill = 0xff0000;
     } else if (this.gameTime <= 30) {
-      this.timerText.style.fill = 0xffaa00; // Orange
+      this.timerText.style.fill = 0xffaa00;
     }
   }
 
@@ -454,20 +478,11 @@ export class Game {
     this.isGameOver = true;
     this.isGameStarted = false;
     
-    // Stop background music
-    // if (this.backgroundMusic) {
-    //   this.backgroundMusic.pause();
-    // }
-    
     if (this.backgroundMusic && !this.backgroundMusic.muted) {
-      // Start the fade to a low volume
-      this.targetVolume = Game.FADED_VOLUME; 
-      this.isFadingMusic = true; // IMPORTANT: Activate the continuous update
-    }
+      this.targetVolume = Game.FADED_VOLUME; 
+      this.isFadingMusic = true;
+    }
 
-    // Stop hero movement
-    this.hero.setVelocityDirection(0, 0);
-    
     // Stop hero movement
     this.hero.setVelocityDirection(0, 0);
     
@@ -479,10 +494,10 @@ export class Game {
     const overlay = new Graphics();
     overlay.rect(0, 0, 1200, 800);
     overlay.fill({ color: 0x000000, alpha: 0.7 });
-    overlay.eventMode = 'static'; // Block clicks to game behind
+    overlay.eventMode = 'static';
     this.gameOverContainer.addChild(overlay);
     
-    // Game over panel - centered on screen
+    // Game over panel
     const panelWidth = 600;
     const panelHeight = 400;
     const panelX = (1200 - panelWidth) / 2;
@@ -562,7 +577,7 @@ export class Game {
       playAgainButton.stroke({ width: 2, color: 0xffffff });
     });
     
-    // Button click - immediately restart game
+    // Button click
     buttonContainer.on('pointerdown', () => {
       console.log('Play Again clicked!');
       this.app.stage.removeChild(this.gameOverContainer);
@@ -573,63 +588,36 @@ export class Game {
     
     this.gameOverContainer.addChild(buttonContainer);
     this.app.stage.addChild(this.gameOverContainer);
-
-    // const muteButton = new Text({
-    //   text: '🔊',
-    //   style: {
-    //     fontSize: 32,
-    //     fill: 0xffffff,
-    //   },
-    // });
-    // muteButton.x = this.app.screen.width - 350;
-    // muteButton.y = 105;
-    // muteButton.eventMode = 'static';
-    // muteButton.cursor = 'pointer';
-    
-    // muteButton.on('pointerdown', () => {
-    //   if (this.backgroundMusic) {
-    //     if (this.backgroundMusic.muted) {
-    //       this.backgroundMusic.muted = false;
-    //       muteButton.text = '🔊'; 
-    //     } else {
-    //       this.backgroundMusic.muted = true;
-    //       muteButton.text = '🔇';
-    //     }
-    //   }
-    // });
-  
-    // this.app.stage.addChild(muteButton);
     
     console.log('Game over screen displayed');
   }
 
   private update(delta: number): void {
-    // This must be called first so the music fades out when isGameOver is true.
     this.updateMusicFade(delta);
 
-    if (this.isGameOver || !this.isGameStarted) return;
-    
-    this.updateTimer(delta);
-    this.hero.update(delta);
-    this.animalSpawner.update(delta);
+    if (this.isGameOver || !this.isGameStarted) return;
+    
+    this.updateTimer(delta);
+    this.hero.update(delta);
+    this.animalSpawner.update(delta);
 
-    this.animals.forEach((animal) => {
-      animal.update(delta, this.hero);
+    this.animals.forEach((animal) => {
+      animal.update(delta, this.hero);
 
-      if (animal.isInYard(this.yard) && !animal.isScored()) {
-        animal.markAsScored();
-        this.scoreManager.addScore(1);
-        this.updateScoreDisplay();
-      }
-    });
+      if (animal.isInYard(this.yard) && !animal.isScored()) {
+        animal.markAsScored();
+        this.scoreManager.addScore(1);
+        this.updateScoreDisplay();
+      }
+    });
 
-    this.checkAnimalCollection();
-    this.removeCompletedAnimals();
-    this.updateCollectedDisplay();
-    
-    const isMaxReached = this.hero.getFollowerCount() >= 5;
-    this.yard.setHighlight(isMaxReached, delta);
-  }
+    this.checkAnimalCollection();
+    this.removeCompletedAnimals();
+    this.updateCollectedDisplay();
+    
+    const isMaxReached = this.hero.getFollowerCount() >= 5;
+    this.yard.setHighlight(isMaxReached, delta);
+  }
 
   private checkAnimalCollection(): void {
     const collectionRadius = 50;
@@ -678,25 +666,24 @@ export class Game {
   }
 
   private updateMusicFade(delta: number): void {
-    if (!this.isFadingMusic || !this.backgroundMusic) return;
+    if (!this.isFadingMusic || !this.backgroundMusic) return;
 
-    // Calculate the step to move towards the target volume
-    const step = this.fadeRate * delta; // Multiply by delta for frame-rate independence
+    const step = this.fadeRate * delta;
 
-    if (this.backgroundMusic.volume > this.targetVolume) {
-      // Fading DOWN
-      this.backgroundMusic.volume = Math.max(this.targetVolume, this.backgroundMusic.volume - step);
-      
-      if (this.backgroundMusic.volume === this.targetVolume) {
-        this.isFadingMusic = false; // Stop fading when target reached
-      }
-    } else if (this.backgroundMusic.volume < this.targetVolume) {
-      // Fading UP (used when starting a new game)
-      this.backgroundMusic.volume = Math.min(this.targetVolume, this.backgroundMusic.volume + step);
+    if (this.backgroundMusic.volume > this.targetVolume) {
+      // Fading DOWN
+      this.backgroundMusic.volume = Math.max(this.targetVolume, this.backgroundMusic.volume - step);
+      
+      if (this.backgroundMusic.volume === this.targetVolume) {
+        this.isFadingMusic = false;
+      }
+    } else if (this.backgroundMusic.volume < this.targetVolume) {
+      // Fading UP
+      this.backgroundMusic.volume = Math.min(this.targetVolume, this.backgroundMusic.volume + step);
 
-      if (this.backgroundMusic.volume === this.targetVolume) {
-        this.isFadingMusic = false; // Stop fading when target reached
-      }
-    }
-  }
+      if (this.backgroundMusic.volume === this.targetVolume) {
+        this.isFadingMusic = false;
+      }
+    }
+  }
 }

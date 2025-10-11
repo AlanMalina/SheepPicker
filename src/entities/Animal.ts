@@ -39,7 +39,7 @@ export class Animal extends MovableEntity {
         const h = this.sprite.height;
         
         if (w > 0 && h > 0) {
-          const targetSize = 40; // Sheep size - smaller
+          const targetSize = 40;
           const scale = targetSize / Math.max(w, h);
           this.sprite.scale.set(scale);
           console.log('[Animal] ✓ Sheep sprite scaled to', scale);
@@ -64,11 +64,40 @@ export class Animal extends MovableEntity {
   }
 
   private setNewPatrolTarget(): void {
-    this.patrolTarget = new Vector2D(
-      Math.random() * 1100 + 50,  // 50 to 1150 (1200 - 50)
-      Math.random() * 700 + 50    // 50 to 750 (800 - 50)
-    );
+    let targetX: number;
+    let targetY: number;
+    let attempts = 0;
+    const maxAttempts = 50;
+    
+    // Keep trying to find a patrol target that's not in the yard
+    do {
+      targetX = Math.random() * 1100 + 50;
+      targetY = Math.random() * 700 + 50;
+      attempts++;
+    } while (this.isPositionInYard(targetX, targetY) && attempts < maxAttempts);
+    
+    // If no valid position found, patrol near current position
+    if (attempts >= maxAttempts) {
+      targetX = this.position.x + (Math.random() * 200 - 100);
+      targetY = this.position.y + (Math.random() * 200 - 100);
+      // Clamp to field bounds
+      targetX = Math.max(50, Math.min(1150, targetX));
+      targetY = Math.max(50, Math.min(750, targetY));
+    }
+    
+    this.patrolTarget = new Vector2D(targetX, targetY);
     this.patrolWaitTime = Math.random() * 60 + 30;
+  }
+
+  private isPositionInYard(x: number, y: number): boolean {
+    // Yard position: (500, 350), size: 300x140
+    const margin = 20;
+    return (
+      x >= 500 - margin &&
+      x <= 500 + 300 + margin &&
+      y >= 350 - margin &&
+      y <= 350 + 140 + margin
+    );
   }
 
   public update(delta: number, hero: Hero): void {
@@ -92,13 +121,21 @@ export class Animal extends MovableEntity {
       if (distance > 2) {
         const normalizedDirection = direction.normalize();
         const movement = normalizedDirection.scale(this.speed * 0.5 * delta);
-        this.position = this.position.add(movement);
+        const newPosition = this.position.add(movement);
         
-        // Clamp position to green field boundaries (accounting for border)
-        const borderSize = 2; // Canvas border thickness
-        const margin = this.radius + 5; // Add extra padding
+        // Check if new position would be in yard - if so, find new patrol target
+        if (this.isPositionInYard(newPosition.x, newPosition.y)) {
+          this.setNewPatrolTarget();
+          return;
+        }
+        
+        this.position = newPosition;
+        
+        // Clamp position to green field boundaries
+        const borderSize = 2;
+        const margin = this.radius + 5;
         this.position.x = Math.max(borderSize + margin, Math.min(1200 - borderSize - margin, this.position.x));
-        this.position.y = Math.max(borderSize + margin, Math.min(800 - borderSize - margin - 200, this.position.y));
+        this.position.y = Math.max(borderSize + margin, Math.min(800 - borderSize - margin, this.position.y));
         
         this.container.x = this.position.x;
         this.container.y = this.position.y;
@@ -118,9 +155,9 @@ export class Animal extends MovableEntity {
       const movement = normalizedDirection.scale(this.speed * delta);
       this.position = this.position.add(movement);
       
-      // Clamp position to green field boundaries (accounting for border)
-      const borderSize = 2; // Canvas border thickness
-      const margin = this.radius + 5; // Add extra padding
+      // Clamp position to green field boundaries
+      const borderSize = 2;
+      const margin = this.radius + 5;
       this.position.x = Math.max(borderSize + margin, Math.min(1200 - borderSize - margin, this.position.x));
       this.position.y = Math.max(borderSize + margin, Math.min(800 - borderSize - margin, this.position.y));
       
