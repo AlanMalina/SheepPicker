@@ -36,15 +36,25 @@ export class Game {
     this.initUI();
   }
 
+  private backgroundMusic: HTMLAudioElement | null = null;
+
+  // Update loadAssets method
   private async loadAssets(): Promise<void> {
     try {
       console.log('Loading game assets...');
       await Assets.load(['coolsheep.png', 'pastuh.png', 'grass.jpg']);
+      
+      // Load background music
+      this.backgroundMusic = new Audio('slipknot-psychosocial.mp3');
+      this.backgroundMusic.loop = true; // Loop the music
+      this.backgroundMusic.volume = 0.3; // Set volume (0.0 to 1.0)
+      
       console.log('Assets loaded successfully!');
     } catch (err) {
       console.warn('Asset load failed, using fallbacks', err);
     }
   }
+
 
   private initUI(): void {
     this.scoreText = new Text({
@@ -327,6 +337,14 @@ export class Game {
       this.startMenuContainer.destroy({ children: true });
     }
     
+    // Start background music
+    if (this.backgroundMusic) {
+      this.backgroundMusic.currentTime = 0; // Reset to beginning
+      this.backgroundMusic.play().catch(err => {
+        console.warn('Failed to play background music:', err);
+      });
+    }
+    
     // Reset timer display
     this.timerText.text = '1:00';
     this.timerText.style.fill = 0xffffff;
@@ -394,6 +412,14 @@ export class Game {
     console.log('Game ending...');
     this.isGameOver = true;
     this.isGameStarted = false;
+    
+    // Stop background music
+    if (this.backgroundMusic) {
+      this.backgroundMusic.pause();
+    }
+    
+    // Stop hero movement
+    this.hero.setVelocityDirection(0, 0);
     
     // Stop hero movement
     this.hero.setVelocityDirection(0, 0);
