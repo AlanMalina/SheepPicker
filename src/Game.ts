@@ -34,6 +34,7 @@ export class Game {
   private targetVolume: number = 0.3;
   private fadeRate: number = 0.005;
   private backgroundMusic: HTMLAudioElement | null = null;
+  private musicFadeTimeout: number | null = null;
 
   constructor(app: Application) {
     this.app = app;
@@ -393,6 +394,12 @@ export class Game {
     this.isGameOver = false;
     this.gameTime = 60;
     
+    // Clear any pending music fade timeout
+    if (this.musicFadeTimeout !== null) {
+      window.clearTimeout(this.musicFadeTimeout);
+      this.musicFadeTimeout = null;
+    }
+    
     // Remove start menu
     if (this.startMenuContainer) {
       this.app.stage.removeChild(this.startMenuContainer);
@@ -478,9 +485,12 @@ export class Game {
     this.isGameOver = true;
     this.isGameStarted = false;
     
+    // Wait 3 seconds before fading music
     if (this.backgroundMusic && !this.backgroundMusic.muted) {
-      this.targetVolume = Game.FADED_VOLUME; 
-      this.isFadingMusic = true;
+      this.musicFadeTimeout = window.setTimeout(() => {
+        this.targetVolume = Game.FADED_VOLUME; 
+        this.isFadingMusic = true;
+      }, 2000); // 3 seconds delay
     }
 
     // Stop hero movement
