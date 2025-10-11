@@ -209,7 +209,7 @@ export class Game {
       },
     });
     loadingText.x = 600 - loadingText.width / 2;
-    loadingText.y = 400 - loadingText.height / 2;
+    loadingText.y = 300 - loadingText.height / 2;
     loadingContainer.addChild(loadingText);
     
     this.app.stage.addChild(loadingContainer);
