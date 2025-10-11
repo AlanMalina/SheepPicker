@@ -83,6 +83,7 @@ export class Game {
         fill: 0xffffff,
       },
     });
+    this.collectedText.x = 1057;
     this.collectedText.y = 10;
     this.app.stage.addChild(this.collectedText);
 
