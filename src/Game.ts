@@ -11,7 +11,7 @@ export class Game {
   private static readonly HERO_RADIUS = 25;
   private static readonly ANIMAL_RADIUS = 15;
   private static readonly NORMAL_VOLUME = 0.3;
-  private static readonly FADED_VOLUME = 0.1;
+  private static readonly FADED_VOLUME = 0.05;
   private static readonly FADE_RATE = 2;
 
   private app: Application;
@@ -32,7 +32,7 @@ export class Game {
   private startMenuContainer!: Container;
   private isFadingMusic: boolean = false;
   private targetVolume: number = 0.3;
-  private fadeRate: number = 0.005;
+  private fadeRate: number = 0.05;
   private backgroundMusic: HTMLAudioElement | null = null;
   private musicFadeTimeout: number | null = null;
 
@@ -490,7 +490,7 @@ export class Game {
       this.musicFadeTimeout = window.setTimeout(() => {
         this.targetVolume = Game.FADED_VOLUME; 
         this.isFadingMusic = true;
-      }, 2000); // 3 seconds delay
+      }, 3000); // 3 seconds delay
     }
 
     // Stop hero movement
