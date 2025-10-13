@@ -490,7 +490,7 @@ export class Game {
       this.musicFadeTimeout = window.setTimeout(() => {
         this.targetVolume = Game.FADED_VOLUME; 
         this.isFadingMusic = true;
-      }, 3000); // 3 seconds delay
+      }, 2500); // 2.5 seconds delay
     }
 
     // Stop hero movement
@@ -678,22 +678,27 @@ export class Game {
   private updateMusicFade(delta: number): void {
     if (!this.isFadingMusic || !this.backgroundMusic) return;
 
-    const step = this.fadeRate * delta;
+    const fadeDuration = 40; // seconds
+    const currentVolume = this.backgroundMusic.volume;
+    const step = (delta / 60) * (1 / fadeDuration); // delta ≈ кадри, тому /60 ≈ секунда
 
-    if (this.backgroundMusic.volume > this.targetVolume) {
-      // Fading DOWN
-      this.backgroundMusic.volume = Math.max(this.targetVolume, this.backgroundMusic.volume - step);
-      
-      if (this.backgroundMusic.volume === this.targetVolume) {
-        this.isFadingMusic = false;
-      }
-    } else if (this.backgroundMusic.volume < this.targetVolume) {
-      // Fading UP
-      this.backgroundMusic.volume = Math.min(this.targetVolume, this.backgroundMusic.volume + step);
-
-      if (this.backgroundMusic.volume === this.targetVolume) {
-        this.isFadingMusic = false;
-      }
+    if (currentVolume > this.targetVolume) {
+        // Fade DOWN
+        this.backgroundMusic.volume = Math.max(
+            this.targetVolume,
+            currentVolume - step
+        );
+    } else if (currentVolume < this.targetVolume) {
+        // Fade UP
+        this.backgroundMusic.volume = Math.min(
+            this.targetVolume,
+            currentVolume + step
+        );
     }
-  }
+
+    // Якщо досягли цілі
+    if (this.backgroundMusic.volume === this.targetVolume) {
+        this.isFadingMusic = false;
+    }
+    }
 }
