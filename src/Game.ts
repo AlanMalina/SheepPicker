@@ -460,6 +460,14 @@ export class Game {
       this.hero.removeFollower();
     }
     this.updateCollectedDisplay();
+    
+    if (this.boss) {
+        this.gameContainer.removeChild(this.boss.getGraphics());
+        this.boss.destroy();
+        this.boss = null;
+    }
+    this.bossSpawned = false;
+    this.bossSpawnTime = 0;
   }
 
   private updateTimerPosition(): void {
