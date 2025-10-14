@@ -6,6 +6,8 @@ import { Yard } from './entities/Yard';
 import { ScoreManager } from './managers/ScoreManager';
 import { AnimalSpawner } from './systems/AnimalSpawner';
 import { Vector2D } from './utils/Vector2D';
+import { Boss } from './entities/Boss';
+
 
 export class Game {
   private static readonly HERO_RADIUS = 25;
@@ -17,6 +19,9 @@ export class Game {
   private app: Application;
   private gameContainer: Container;
   private hero!: Hero;
+  private boss: Boss | null = null;
+  private bossSpawned: boolean = false;
+  private bossSpawnTime: number = 0;
   private animals: Animal[] = [];
   private yard!: Yard;
   private scoreManager!: ScoreManager;
@@ -47,7 +52,7 @@ export class Game {
   private async loadAssets(): Promise<void> {
     try {
       console.log('Loading game assets...');
-      await Assets.load(['coolsheep.png', 'pastuh.png', 'grass.jpg']);
+      await Assets.load(['coolsheep.png', 'pastuh.png', 'grass.jpg', 'boss.png']);
       
       // Load background music
       this.backgroundMusic = new Audio('slipknot-psychosocial.mp3');
@@ -392,38 +397,44 @@ export class Game {
     console.log('Starting game...');
     this.isGameStarted = true;
     this.isGameOver = false;
-    this.gameTime = 60;
-    
+    this.gameTime = 60; // reset timer
+
+    // Reset boss state for this game
+    this.boss = null;
+    this.bossSpawned = false;
+    this.bossSpawnTime = Math.random() * (this.gameTime - 10); // spawn before last 10s
+
     // Clear any pending music fade timeout
     if (this.musicFadeTimeout !== null) {
-      window.clearTimeout(this.musicFadeTimeout);
-      this.musicFadeTimeout = null;
+        window.clearTimeout(this.musicFadeTimeout);
+        this.musicFadeTimeout = null;
     }
-    
-    // Remove start menu
+
+    // Remove start menu if present
     if (this.startMenuContainer) {
-      this.app.stage.removeChild(this.startMenuContainer);
-      this.startMenuContainer.destroy({ children: true });
+        this.app.stage.removeChild(this.startMenuContainer);
+        this.startMenuContainer.destroy({ children: true });
     }
-    
+
     // Start background music
     if (this.backgroundMusic) {
-      this.backgroundMusic.currentTime = 0;
-      this.backgroundMusic.volume = 0.05;
-      this.targetVolume = 0.3;
-      this.isFadingMusic = true;
-      this.backgroundMusic.play().catch(err => {
-        console.warn('Failed to play background music:', err);
-      });
+        this.backgroundMusic.currentTime = 0;
+        this.backgroundMusic.volume = 0.05;
+        this.targetVolume = 0.3;
+        this.isFadingMusic = true;
+        this.backgroundMusic.play().catch(err => {
+            console.warn('Failed to play background music:', err);
+        });
     }
-    
+
     // Reset timer display
     this.timerText.text = '1:00';
     this.timerText.style.fill = 0xffffff;
     this.updateTimerPosition();
-    
-    console.log('Game started!');
-  }
+
+    console.log('Game started! Boss will spawn at', this.bossSpawnTime.toFixed(2), 'seconds');
+}
+
 
   private resetGame(): void {
     // Reset score
@@ -495,6 +506,14 @@ export class Game {
 
     // Stop hero movement
     this.hero.setVelocityDirection(0, 0);
+
+    // Remove boss if exists
+    if (this.boss) {
+        this.gameContainer.removeChild(this.boss.getGraphics());
+        this.boss.destroy();
+        this.boss = null;
+        this.bossSpawned = false;
+    }
     
     // Create game over screen
     this.gameOverContainer = new Container();
@@ -601,6 +620,16 @@ export class Game {
     
     console.log('Game over screen displayed');
   }
+  private spawnBoss(): void {
+    const x = Math.random() * 1000 + 100;
+    const y = Math.random() * 600 + 100;
+
+    console.log('Boss spawned at', x, y);
+    this.boss = new Boss(x, y);
+    this.bossSpawned = true;
+    this.gameContainer.addChild(this.boss.getGraphics());
+  }
+
 
   private update(delta: number): void {
     this.updateMusicFade(delta);
@@ -608,6 +637,23 @@ export class Game {
     if (this.isGameOver || !this.isGameStarted) return;
     
     this.updateTimer(delta);
+    // Spawn boss at precomputed time
+    if (!this.bossSpawned && this.gameTime <= this.bossSpawnTime) {
+      this.spawnBoss();
+    }
+
+    // Boss behavior
+    if (this.boss && this.boss.isActive()) {
+        this.boss.update(delta, this.hero);
+        if (this.boss.checkHeroCollision(this.hero)) {
+            console.log('Boss hit the Hero!');
+            this.endGame();
+        }
+    } else if (this.boss && !this.boss.isActive()) {
+        this.gameContainer.removeChild(this.boss.getGraphics());
+        this.boss = null;
+    }
+
     this.hero.update(delta);
     this.animalSpawner.update(delta);
 
