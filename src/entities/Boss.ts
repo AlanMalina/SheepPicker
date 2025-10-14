@@ -20,7 +20,7 @@ export class Boss {
     this.sprite = Sprite.from('boss.png');
     this.sprite.anchor.set(0.5); // center the sprite
     this.sprite.width = 120;       // optional: set size
-    this.sprite.height = 120;
+    this.sprite.height = 150;
     this.container.addChild(this.sprite);
 
     this.container.x = x;
